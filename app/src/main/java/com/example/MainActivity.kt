@@ -4,6 +4,13 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.RepeatMode
 
 
@@ -41,7 +48,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.togetherWith
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -77,7 +87,6 @@ sealed class Screen(val route: String, val title: String, val icon: androidx.com
   object Profile : Screen("profile", "Profile", Icons.Outlined.Person, Icons.Filled.Person)
   object Search : Screen("search", "Search", Icons.Outlined.Search, Icons.Filled.Search)
   object CameraSearch : Screen("camera", "Camera", Icons.Outlined.CameraAlt, Icons.Filled.CameraAlt)
-  object CircleDeals : Screen("circle_deals", "Circle Deals", Icons.Outlined.LocalOffer, Icons.Filled.LocalOffer)
 }
 
 @Composable
@@ -111,21 +120,11 @@ fun MainScreen() {
   Scaffold(
     modifier = Modifier.nestedScroll(nestedScrollConnection),
     bottomBar = {
-      Box(
-        modifier = Modifier
-          .fillMaxWidth()
-          .offset { androidx.compose.ui.unit.IntOffset(x = 0, y = bottomBarOffsetHeightPx.floatValue.toInt()) }
-          .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+      NavigationBar(
+        modifier = Modifier.offset { androidx.compose.ui.unit.IntOffset(x = 0, y = bottomBarOffsetHeightPx.floatValue.toInt()) },
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 8.dp
       ) {
-        NavigationBar(
-          modifier = Modifier
-            .fillMaxWidth()
-            .shadow(16.dp, RoundedCornerShape(24.dp))
-            .clip(RoundedCornerShape(24.dp)),
-          containerColor = Color.White,
-          tonalElevation = 0.dp,
-          windowInsets = WindowInsets(0, 0, 0, 0)
-        ) {
           val navBackStackEntry by navController.currentBackStackEntryAsState()
           val currentDestination = navBackStackEntry?.destination
           items.forEach { screen ->
@@ -136,7 +135,7 @@ fun MainScreen() {
                   contentDescription = screen.title
                 )
               },
-              label = { Text(screen.title, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+              label = { Text(screen.title, fontSize = 10.sp) },
               selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
               onClick = {
                 navController.navigate(screen.route) {
@@ -148,17 +147,16 @@ fun MainScreen() {
                 }
               },
               colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = Color(0xFF00643C),
-                selectedTextColor = Color(0xFF00643C),
-                indicatorColor = Color(0xFFE8F5E9),
-                unselectedIconColor = Color.Gray,
-                unselectedTextColor = Color.Gray
+                selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                selectedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
               )
             )
           }
         }
       }
-    }
   ) { innerPadding ->
     val currentBottomOffsetDp = with(androidx.compose.ui.platform.LocalDensity.current) { bottomBarOffsetHeightPx.floatValue.toDp() }
     val bottomPadding = maxOf(0.dp, innerPadding.calculateBottomPadding() - currentBottomOffsetDp)
@@ -167,17 +165,21 @@ fun MainScreen() {
       startDestination = Screen.Home.route,
       modifier = Modifier.padding(bottom = bottomPadding)
     ) {
-      composable(Screen.Home.route) { HomeScreen(onSearchClick = { navController.navigate(Screen.Search.route) }, onCameraClick = { navController.navigate(Screen.CameraSearch.route) }, onCircleDealsClick = { navController.navigate(Screen.CircleDeals.route) }) }
+      composable(Screen.Home.route) { HomeScreen(onSearchClick = { navController.navigate(Screen.Search.route) }, onCameraClick = { navController.navigate(Screen.CameraSearch.route) }, onCircleDealsClick = { id -> navController.navigate("circleDeals" + (if(id != null) "?productId=$id" else "")) }, onProductClick = { id -> navController.navigate("productDetails/$id") }) }
+      composable("productDetails/{productId}", arguments = listOf(androidx.navigation.navArgument("productId") { type = androidx.navigation.NavType.IntType })) { backStackEntry ->
+        val productId = backStackEntry.arguments?.getInt("productId") ?: 0
+        ProductDetailsScreen(productId = productId, onBack = { navController.popBackStack() })
+      }
+      composable("circleDeals?productId={productId}", arguments = listOf(androidx.navigation.navArgument("productId") { nullable = true; type = androidx.navigation.NavType.StringType })) { backStackEntry ->
+        val productId = backStackEntry.arguments?.getString("productId")
+        CircleDealsScreen(highlightProductId = productId, onBack = { navController.popBackStack() }, onProductClick = { id -> navController.navigate("productDetails/$id") })
+      }
       composable(Screen.Category.route) { CategoryScreen() }
       composable(Screen.Cart.route) { CartScreen() }
       composable(Screen.Orders.route) { OrdersScreen() }
       composable(Screen.Profile.route) { ProfileScreen() }
       composable(Screen.Search.route) { SearchScreen(onBack = { navController.popBackStack() }) }
       composable(Screen.CameraSearch.route) { CameraSearchScreen(onBack = { navController.popBackStack() }) }
-      composable(
-        Screen.CircleDeals.route,
-        deepLinks = listOf(androidx.navigation.navDeepLink { uriPattern = "https://circlebazar.com/deals" })
-      ) { CircleDealsScreen(onBack = { navController.popBackStack() }) }
     }
   }
 }
@@ -193,7 +195,8 @@ data class Product(
   val soldCount: Int,
   val discount: Int? = null,
   val stock: Int = 20,
-  val maxStock: Int = 100
+  val maxStock: Int = 100,
+  val isCircleDeal: Boolean = false
 )
 
 val images = listOf(
@@ -214,38 +217,17 @@ val mockProducts = List(20) { index ->
     soldCount = 500 + (index * 15),
     discount = 15 + (index % 5) * 5,
     stock = 20,
-    maxStock = 100
+    maxStock = 100,
+    isCircleDeal = index % 3 == 0
   )
 }
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-fun HomeScreen(onSearchClick: () -> Unit = {}, onCameraClick: () -> Unit = {}, onCircleDealsClick: () -> Unit = {}) {
+fun HomeScreen(onSearchClick: () -> Unit = {}, onCameraClick: () -> Unit = {}, onCircleDealsClick: (String?) -> Unit = {}, onProductClick: (Int) -> Unit = {}) {
   val listState = rememberLazyListState()
   // Generate 20 products by repeating and shuffling
-  var circleDealsList by remember { 
-      val doubled = mockProducts + mockProducts
-      mutableStateOf(doubled.shuffled().take(20))
-  }
   
-  LaunchedEffect(Unit) {
-      while (true) {
-          kotlinx.coroutines.delay(1000) // Sell a product every second
-          if (circleDealsList.isNotEmpty()) {
-              val randomIndex = circleDealsList.indices.random()
-              val product = circleDealsList[randomIndex]
-              if (product.stock > 0) {
-                  val updatedProduct = product.copy(
-                      stock = product.stock - 1,
-                      soldCount = product.soldCount + 1
-                  )
-                  val newList = circleDealsList.toMutableList()
-                  newList[randomIndex] = updatedProduct
-                  circleDealsList = newList
-              }
-          }
-      }
-  }
 
   val showStickyHeader by remember {
      derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0 }
@@ -301,6 +283,17 @@ fun HomeScreen(onSearchClick: () -> Unit = {}, onCameraClick: () -> Unit = {}, o
                .statusBarsPadding()
                .padding(start = 16.dp, end = 16.dp, top = 8.dp)
            ) {
+              // Animated Placeholder for Search
+              val searchHints = listOf("Search Circle Bazar", "Wireless Earbuds", "Samsung Galaxy", "Nike Shoes", "Laptop", "Bluetooth Speaker", "Women's Handbag", "Gaming Mouse")
+              var currentHintIndex by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+              
+              LaunchedEffect(Unit) {
+                  while (true) {
+                      kotlinx.coroutines.delay(2000)
+                      currentHintIndex = (currentHintIndex + 1) % searchHints.size
+                  }
+              }
+
               Row(
                   modifier = Modifier
                       .fillMaxWidth()
@@ -311,16 +304,27 @@ fun HomeScreen(onSearchClick: () -> Unit = {}, onCameraClick: () -> Unit = {}, o
                       .padding(horizontal = 16.dp),
                   verticalAlignment = Alignment.CenterVertically
               ) {
-                  Icon(Icons.Outlined.Search, contentDescription = "Search", tint = Color.Gray, modifier = Modifier.size(20.dp))
+                  Icon(Icons.Outlined.Search, contentDescription = "Search", tint = Color.Gray)
                   Spacer(Modifier.width(8.dp))
-                  Text(
-                      "Search products, brands and stores", 
-                      color = Color.Gray, 
-                      fontSize = 13.sp, 
-                      maxLines = 1,
-                      overflow = TextOverflow.Ellipsis,
-                      modifier = Modifier.weight(1f)
-                  )
+                  
+                  androidx.compose.animation.AnimatedContent(
+                      targetState = searchHints[currentHintIndex],
+                      transitionSpec = {
+                          androidx.compose.animation.slideInVertically { height -> height } + androidx.compose.animation.fadeIn() togetherWith
+                          androidx.compose.animation.slideOutVertically { height -> -height } + androidx.compose.animation.fadeOut()
+                      },
+                      modifier = Modifier.weight(1f),
+                      label = "searchHintAnimation"
+                  ) { targetHint ->
+                      Text(
+                          text = targetHint,
+                          color = Color.Gray,
+                          fontSize = 13.sp,
+                          maxLines = 1,
+                          overflow = TextOverflow.Ellipsis
+                      )
+                  }
+                  
                   Icon(
                       Icons.Outlined.CameraAlt, 
                       contentDescription = "Image Search", 
@@ -329,7 +333,7 @@ fun HomeScreen(onSearchClick: () -> Unit = {}, onCameraClick: () -> Unit = {}, o
                          interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                          indication = null
                       ) { 
-                         try { context.startActivity(chooserIntent) } catch(e: Exception) {} 
+                         onCameraClick()
                       }
                   )
                   Icon(
@@ -362,11 +366,8 @@ fun HomeScreen(onSearchClick: () -> Unit = {}, onCameraClick: () -> Unit = {}, o
            }
            }
       }
-
       item {
-        // Spacer to separate banner and deals
         Spacer(modifier = Modifier.height(24.dp))
-        // Circle Deals Section
         Row(
            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
            horizontalArrangement = Arrangement.SpaceBetween,
@@ -417,23 +418,23 @@ fun HomeScreen(onSearchClick: () -> Unit = {}, onCameraClick: () -> Unit = {}, o
                  Text(":", color = timerBg, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                  Box(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(timerBg).padding(horizontal = 6.dp, vertical = 3.dp)) {
                      Text("12", color = timerText, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
-                 }             }
+                 }
+             }
            }
-           Text("Show More", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.clickable { onCircleDealsClick() })
+           Text("Show More", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.clickable { onCircleDealsClick(null) })
         }
         Spacer(modifier = Modifier.height(12.dp))
       }
       
       item {
-        androidx.compose.foundation.lazy.grid.LazyHorizontalGrid(
-            rows = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+        val circleDeals = remember { mockProducts.filter { it.isCircleDeal }.shuffled() }
+        LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth().height(480.dp) // Approximate height for 2 rows of 240dp cards + spacing
+            modifier = Modifier.fillMaxWidth()
         ) {
-            items(circleDealsList.size) { index ->
-                CircleDealCard(circleDealsList[index], modifier = Modifier.width(130.dp))
+            items(circleDeals) { product ->
+                ProductCard(product, modifier = Modifier.width(140.dp).clickable { onCircleDealsClick(product.id.toString()) })
             }
         }
       }
@@ -468,7 +469,13 @@ fun HomeScreen(onSearchClick: () -> Unit = {}, onCameraClick: () -> Unit = {}, o
           horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
           for (product in rowProducts) {
-            ProductCard(product, modifier = Modifier.weight(1f))
+            ProductCard(product, modifier = Modifier.weight(1f).clickable { 
+                if (product.isCircleDeal) {
+                    onCircleDealsClick(product.id.toString())
+                } else {
+                    onProductClick(product.id)
+                }
+            })
           }
           if (rowProducts.size == 1) {
             Spacer(modifier = Modifier.weight(1f))
@@ -485,7 +492,7 @@ fun HomeScreen(onSearchClick: () -> Unit = {}, onCameraClick: () -> Unit = {}, o
        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically(
            initialOffsetY = { -it }
        ),
-       exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically(
+       exit = fadeOut() + androidx.compose.animation.slideOutVertically(
            targetOffsetY = { -it }
        ),
        modifier = Modifier.align(Alignment.TopCenter)
@@ -500,82 +507,40 @@ fun HomeScreen(onSearchClick: () -> Unit = {}, onCameraClick: () -> Unit = {}, o
                modifier = Modifier
                    .fillMaxWidth()
                    .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars)
-                   .padding(horizontal = 16.dp, vertical = 12.dp),
+                   .padding(horizontal = 16.dp, vertical = 6.dp),
                horizontalArrangement = Arrangement.SpaceBetween,
                verticalAlignment = Alignment.CenterVertically
            ) {
                // Logo and Title (Left aligned)
                Row(
-                   verticalAlignment = Alignment.CenterVertically,
-                   modifier = Modifier.weight(1f)
+                   verticalAlignment = Alignment.CenterVertically
                ) {
                    Image(
                        painter = androidx.compose.ui.res.painterResource(id = R.drawable.circle_bazar_icon_1784463007760),
                        contentDescription = "Logo",
-                       modifier = Modifier.size(32.dp).clip(CircleShape),
+                       modifier = Modifier.size(28.dp).clip(CircleShape),
                        contentScale = ContentScale.Crop
                    )
-                   Spacer(modifier = Modifier.width(12.dp))
+                   Spacer(modifier = Modifier.width(10.dp))
                    Text(
                        "Circle Bazar", 
                        style = MaterialTheme.typography.titleLarge.copy(
                            fontWeight = FontWeight.ExtraBold,
-                           fontFamily = FontFamily.Serif,
-                           letterSpacing = 0.5.sp,
-                           fontSize = 20.sp,
+                           fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                           fontFamily = FontFamily.SansSerif,
+                           fontSize = 18.sp,
                            color = Color(0xFF00643C)
-                       ),
-                       maxLines = 1,
-                       overflow = TextOverflow.Ellipsis
+                       )
                    )
                }
                
-               Spacer(modifier = Modifier.width(8.dp))
-               
-               // Icons (Right aligned, premium styling)
+               // Icons (Right aligned, better styling)
                Row(
-                   horizontalArrangement = Arrangement.spacedBy(12.dp),
+                   horizontalArrangement = Arrangement.spacedBy(16.dp),
                    verticalAlignment = Alignment.CenterVertically
                ) {
-                   Box(
-                       modifier = Modifier
-                           .size(36.dp)
-                           .clip(CircleShape)
-                           .background(Color(0xFFF0F5F2))
-                           .clickable { onSearchClick() },
-                       contentAlignment = Alignment.Center
-                   ) {
-                       Icon(
-                           Icons.Outlined.Search,
-                           contentDescription = "Search",
-                           tint = Color(0xFF00643C),
-                           modifier = Modifier.size(18.dp)
-                       )
-                   }
-                   Box(
-                       modifier = Modifier
-                           .size(36.dp)
-                           .clip(CircleShape)
-                           .background(Color(0xFFF0F5F2))
-                           .clickable { },
-                       contentAlignment = Alignment.Center
-                   ) {
-                       Icon(
-                           Icons.Outlined.Notifications,
-                           contentDescription = "Notifications",
-                           tint = Color(0xFF00643C),
-                           modifier = Modifier.size(18.dp)
-                       )
-                       // Notification Badge
-                       Box(
-                           modifier = Modifier
-                               .align(Alignment.TopEnd)
-                               .padding(top = 8.dp, end = 8.dp)
-                               .size(6.dp)
-                               .clip(CircleShape)
-                               .background(Color.Red)
-                       )
-                   }
+                   Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_custom_search), contentDescription = "Search", tint = Color(0xFF333333), modifier = Modifier.size(20.dp).clickable { onSearchClick() })
+                   Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_custom_notification), contentDescription = "Notifications", tint = Color(0xFF333333), modifier = Modifier.size(20.dp).clickable { })
                }
            }
        }
@@ -613,6 +578,24 @@ fun SectionTitle(title: String, action: String) {
   }
 }
 
+
+
+@Composable
+fun CircleDealsBadge() {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .padding(bottom = 4.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF00643C), Color(0xFF4CAF50))))
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+    ) {
+        Icon(Icons.Outlined.Star, contentDescription = null, tint = Color.White, modifier = Modifier.size(10.dp))
+        Spacer(modifier = Modifier.width(2.dp))
+        Text("Circle Deals", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
 @Composable
 fun ProductCard(product: Product, modifier: Modifier = Modifier) {
   Card(
@@ -633,6 +616,9 @@ fun ProductCard(product: Product, modifier: Modifier = Modifier) {
           )
         }
         Spacer(modifier = Modifier.height(8.dp))
+        if (product.isCircleDeal) {
+            CircleDealsBadge()
+        }
         Text(
           product.title,
           style = MaterialTheme.typography.bodyMedium,
@@ -713,95 +699,6 @@ fun ProductCard(product: Product, modifier: Modifier = Modifier) {
   }
 }
 
-@Composable
-fun CircleDealCard(product: Product, modifier: Modifier = Modifier) {
-  Card(
-    modifier = modifier.clickable { },
-    colors = CardDefaults.cardColors(containerColor = Color.White),
-    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    shape = RoundedCornerShape(8.dp),
-    border = BorderStroke(1.dp, Color(0xFF4CAF50))
-  ) {
-    Box {
-      Column(modifier = Modifier.padding(6.dp)) { // Reduced padding from 8dp to 6dp
-        Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f).padding(top = 4.dp)) { // Reduced top padding
-          AsyncImage(
-            model = product.imageUrl,
-            contentDescription = product.title,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxSize()
-          )
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-          product.title,
-          style = MaterialTheme.typography.bodyMedium,
-          fontWeight = FontWeight.Medium,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis,
-          color = Color.Black
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        
-        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()) {
-          Text(
-            "৳ ${product.price.toInt()}",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF4CAF50)
-          )
-          if (product.oldPrice != null) {
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-              "৳ ${product.oldPrice.toInt()}",
-              style = MaterialTheme.typography.bodySmall,
-              color = Color.Gray,
-              textDecoration = TextDecoration.LineThrough,
-              fontSize = 10.sp
-            )
-          }
-        }
-        Spacer(modifier = Modifier.height(6.dp))
-        
-        // Stock Progress Bar (Green)
-        val progress = (product.maxStock - product.stock).toFloat() / product.maxStock.toFloat()
-        
-        Column(modifier = Modifier.fillMaxWidth()) {
-           Text("Only ${product.stock} Left", fontSize = 13.sp, color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold) // Made larger
-           Spacer(modifier = Modifier.height(4.dp))
-           Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color(0xFFE0E0E0))) { // Made thicker
-              Box(modifier = Modifier.fillMaxWidth(progress).height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color(0xFF4CAF50))) // Made thicker
-           }
-        }
-      }
-      
-      // Top Left Corner - Discount Badge
-      if (product.discount != null) {
-        Box(
-          modifier = Modifier
-            .align(Alignment.TopStart)
-            .clip(RoundedCornerShape(topStart = 8.dp, bottomEnd = 8.dp))
-            .background(Color(0xFF4CAF50))
-            .padding(horizontal = 6.dp, vertical = 2.dp)
-        ) {
-          Text("-${product.discount}%", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-        }
-      }
-      
-      // Top Right Corner - Favorite Icon
-      Icon(
-        Icons.Outlined.FavoriteBorder,
-        contentDescription = "Favorite",
-        tint = Color.Gray,
-        modifier = Modifier
-            .align(Alignment.TopEnd)
-            .padding(8.dp)
-            .size(20.dp)
-            .clickable { }
-      )
-    }
-  }
-}
 
 @Composable
 fun CategoryItem(name: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
@@ -1245,86 +1142,412 @@ fun CameraSearchScreen(onBack: () -> Unit) {
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CircleDealsScreen(highlightProductId: String? = null, onBack: () -> Unit = {}, onProductClick: (Int) -> Unit = {}) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(android.content.Intent.EXTRA_SUBJECT, "Circle Bazar - Circle Deals")
+        putExtra(android.content.Intent.EXTRA_TEXT, "Check out the amazing Circle Deals on Circle Bazar! \n\nhttps://circlebazar.com/deals")
+    }
+
+    val circleDealsProducts = remember(highlightProductId) {
+        val allDeals = mockProducts.filter { it.isCircleDeal }.toMutableList()
+        if (highlightProductId != null) {
+            val highlighted = allDeals.find { it.id.toString() == highlightProductId }
+            if (highlighted != null) {
+                allDeals.remove(highlighted)
+                allDeals.add(0, highlighted) // Put at the top
+            }
+        }
+        allDeals
+    }
+
+    // Animated Placeholder for Search
+    val searchHints = listOf("Search Circle Deals", "Wireless Earbuds", "Samsung Galaxy", "Nike Shoes", "Laptop", "Bluetooth Speaker", "Women's Handbag", "Gaming Mouse")
+    var currentHintIndex by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(2000)
+            currentHintIndex = (currentHintIndex + 1) % searchHints.size
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            Column(modifier = Modifier.fillMaxWidth().background(Color.White).shadow(4.dp)) {
+                // Top Row: Back, Title, Cart, Share
+                Row(
+                    modifier = Modifier.fillMaxWidth().statusBarsPadding().height(56.dp).padding(horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = Color.Black)
+                    }
+                    
+                    // Animated Title
+                    val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "shimmer")
+                    val translateAnim = infiniteTransition.animateFloat(
+                        initialValue = 0f,
+                        targetValue = 1000f,
+                        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                            animation = androidx.compose.animation.core.tween(durationMillis = 3000, easing = androidx.compose.animation.core.LinearEasing),
+                            repeatMode = androidx.compose.animation.core.RepeatMode.Restart
+                        ), label = "shimmerTranslate"
+                    )
+                    val brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                        colors = listOf(Color(0xFF4CAF50), Color(0xFF00C853), Color(0xFF4CAF50)),
+                        start = androidx.compose.ui.geometry.Offset(translateAnim.value, translateAnim.value),
+                        end = androidx.compose.ui.geometry.Offset(translateAnim.value + 200f, translateAnim.value + 200f)
+                    )
+                    
+                    Text(
+                        text = "Circle Deals",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            fontFamily = FontFamily.Serif,
+                            brush = brush
+                        ),
+                        modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    
+                    IconButton(onClick = { /* Open Cart */ }) {
+                        Icon(Icons.Outlined.ShoppingCart, contentDescription = "Cart", tint = Color.Black)
+                    }
+                    IconButton(onClick = {
+                        val chooser = android.content.Intent.createChooser(shareIntent, "Share Circle Deals")
+                        context.startActivity(chooser)
+                    }) {
+                        Icon(Icons.Outlined.Share, contentDescription = "Share", tint = Color.Black)
+                    }
+                }
+                
+                // Search Box Row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .height(44.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(Color(0xFFF5F5F5))
+                        .clickable { /* Navigate to search */ }
+                        .padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Outlined.Search, contentDescription = "Search", tint = Color(0xFF00643C), modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = searchHints[currentHintIndex],
+                        transitionSpec = {
+                            androidx.compose.animation.slideInVertically { height -> height } + androidx.compose.animation.fadeIn() togetherWith
+                            androidx.compose.animation.slideOutVertically { height -> -height } + androidx.compose.animation.fadeOut()
+                        },
+                        modifier = Modifier.weight(1f),
+                        label = "searchHintAnimation"
+                    ) { targetHint ->
+                        Text(
+                            text = targetHint,
+                            color = Color.Gray,
+                            fontSize = 13.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    
+                    Icon(
+                        Icons.Outlined.CameraAlt, 
+                        contentDescription = "Image Search", 
+                        tint = Color(0xFF00643C), 
+                        modifier = Modifier.size(20.dp).clickable { /* Lens */ }
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Icon(
+                        Icons.Outlined.Mic, 
+                        contentDescription = "Voice Search", 
+                        tint = Color(0xFF00643C), 
+                        modifier = Modifier.size(20.dp).clickable { /* Voice */ }
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+        }
+    ) { paddingValues ->
+        LazyColumn(
+            contentPadding = PaddingValues(top = paddingValues.calculateTopPadding(), bottom = 24.dp),
+            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+        ) {
+            item {
+                // Banner Slider
+                var bannerIndex by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+                LaunchedEffect(Unit) {
+                    while (true) {
+                        kotlinx.coroutines.delay(3000)
+                        bannerIndex = (bannerIndex + 1) % 3
+                    }
+                }
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(140.dp).padding(16.dp).clip(RoundedCornerShape(12.dp)).background(Color.LightGray)
+                ) {
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = bannerIndex,
+                        transitionSpec = {
+                            androidx.compose.animation.slideInHorizontally { width -> width } + androidx.compose.animation.fadeIn() togetherWith
+                            androidx.compose.animation.slideOutHorizontally { width -> -width } + androidx.compose.animation.fadeOut()
+                        },
+                        label = "bannerAnimation"
+                    ) { index ->
+                        val colors = listOf(Color(0xFFE8F5E9), Color(0xFFE3F2FD), Color(0xFFFFF3E0))
+                        Box(modifier = Modifier.fillMaxSize().background(colors[index]), contentAlignment = Alignment.Center) {
+                            Text("Circle Deals Campaign ${index + 1}", fontWeight = FontWeight.Bold, color = Color(0xFF00643C))
+                        }
+                    }
+                    // Indicators
+                    Row(modifier = Modifier.align(Alignment.BottomCenter).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        for (i in 0 until 3) {
+                            Box(modifier = Modifier.size(if (i == bannerIndex) 8.dp else 6.dp).clip(CircleShape).background(if (i == bannerIndex) Color(0xFF00643C) else Color.Gray))
+                        }
+                    }
+                }
+            }
+            
+            item {
+                // Categories
+                val categories = listOf("Electronics", "Fashion", "Beauty", "Shoes", "Home", "Sports", "Baby")
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.padding(bottom = 16.dp)
+                ) {
+                    items(categories.size) { index ->
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { }) {
+                            Box(modifier = Modifier.size(56.dp).clip(CircleShape).background(Color.White).border(1.dp, Color(0xFFE0E0E0), CircleShape), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Outlined.Star, contentDescription = categories[index], tint = Color(0xFF00643C))
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(categories[index], fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+            }
+            
+            val chunkedProducts = circleDealsProducts.chunked(2)
+            items(chunkedProducts) { rowProducts ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    for (product in rowProducts) {
+                        ProductCard(product, modifier = Modifier.weight(1f).clickable { onProductClick(product.id) })
+                    }
+                    if (rowProducts.size == 1) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CircleDealsScreen(onBack: () -> Unit = {}) {
-  val context = androidx.compose.ui.platform.LocalContext.current
-  val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-      type = "text/plain"
-      putExtra(android.content.Intent.EXTRA_SUBJECT, "Circle Bazar - Circle Deals")
-      putExtra(android.content.Intent.EXTRA_TEXT, "Check out the amazing Circle Deals on Circle Bazar! \n\nhttps://circlebazar.com/deals")
-  }
-  
-  var circleDealsList by remember { 
-      mutableStateOf(mockProducts)
-  }
-  
-  LaunchedEffect(Unit) {
-      while (true) {
-          kotlinx.coroutines.delay(1000) // Sell a product every second
-          if (circleDealsList.isNotEmpty()) {
-              val randomIndex = circleDealsList.indices.random()
-              val product = circleDealsList[randomIndex]
-              if (product.stock > 0) {
-                  val updatedProduct = product.copy(
-                      stock = product.stock - 1,
-                      soldCount = product.soldCount + 1
-                  )
-                  val newList = circleDealsList.toMutableList()
-                  newList[randomIndex] = updatedProduct
-                  circleDealsList = newList
-              }
-          }
-      }
-  }
-  
-  Scaffold(
-      topBar = {
-          TopAppBar(
-              title = { Text("Circle Deals", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
-              navigationIcon = {
-                  IconButton(onClick = onBack) {
-                      Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-                  }
-              },
-              actions = {
-                  IconButton(onClick = {
-                      val chooser = android.content.Intent.createChooser(shareIntent, "Share Circle Deals")
-                      context.startActivity(chooser)
-                  }) {
-                      Icon(Icons.Outlined.Share, contentDescription = "Share")
-                  }
-              },
-              colors = TopAppBarDefaults.topAppBarColors(
-                  containerColor = Color.White,
-                  titleContentColor = Color.Black,
-                  navigationIconContentColor = Color.Black,
-                  actionIconContentColor = Color.Black
-              )
-          )
-      }
-  ) { paddingValues ->
-      LazyColumn(
-          contentPadding = PaddingValues(top = paddingValues.calculateTopPadding(), bottom = 24.dp),
-          modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
-      ) {
-          val chunkedProducts = circleDealsList.chunked(2)
-          items(chunkedProducts) { rowProducts ->
-              Row(
-                  modifier = Modifier
-                      .fillMaxWidth()
-                      .padding(horizontal = 8.dp, vertical = 6.dp),
-                  horizontalArrangement = Arrangement.spacedBy(8.dp)
-              ) {
-                  for (product in rowProducts) {
-                      CircleDealCard(product, modifier = Modifier.weight(1f))
-                  }
-                  if (rowProducts.size == 1) {
-                      Spacer(modifier = Modifier.weight(1f))
-                  }
-              }
-          }
-      }
-  }
+fun ProductDetailsScreen(productId: Int, onBack: () -> Unit = {}) {
+    val product = mockProducts.find { it.id == productId } ?: return
+    
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(android.content.Intent.EXTRA_SUBJECT, "Circle Bazar - Product")
+        putExtra(android.content.Intent.EXTRA_TEXT, "Check out this product on Circle Bazar! \n\nhttps://circlebazar.com/product/${product.id}")
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Product Details", style = MaterialTheme.typography.titleMedium) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        val chooser = android.content.Intent.createChooser(shareIntent, "Share")
+                        context.startActivity(chooser)
+                    }) {
+                        Icon(Icons.Outlined.Share, contentDescription = "Share")
+                    }
+                    IconButton(onClick = { }) {
+                        Icon(Icons.Outlined.ShoppingCart, contentDescription = "Cart")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+            )
+        },
+        bottomBar = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .shadow(elevation = 16.dp)
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                androidx.compose.material3.OutlinedButton(
+                    onClick = { /* Add to cart */ },
+                    modifier = Modifier.weight(1f),
+                    border = BorderStroke(1.dp, Color(0xFF00643C)),
+                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF00643C))
+                ) {
+                    Text("Add to Cart")
+                }
+                Button(
+                    onClick = { /* Buy Now */ },
+                    modifier = Modifier.weight(1f),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF00643C))
+                ) {
+                    Text("Buy Now")
+                }
+            }
+        }
+    ) { paddingValues ->
+        LazyColumn(
+            contentPadding = PaddingValues(top = paddingValues.calculateTopPadding(), bottom = 80.dp),
+            modifier = Modifier.fillMaxSize().background(Color(0xFFF5F5F5))
+        ) {
+            item {
+                // Product Image View
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                        .background(Color.White)
+                ) {
+                    AsyncImage(
+                        model = product.imageUrl,
+                        contentDescription = product.title,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize().padding(16.dp)
+                    )
+                }
+            }
+            
+            if (product.isCircleDeal) {
+                item {
+                    // Animated Circle Deal Timer Card
+                    val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "pulse")
+                    val scale by infiniteTransition.animateFloat(
+                        initialValue = 0.98f,
+                        targetValue = 1.02f,
+                        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                            animation = androidx.compose.animation.core.tween(1000, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+                        ), label = "pulseScale"
+                    )
+                    
+                    Box(modifier = Modifier.fillMaxWidth().background(Color.White).padding(bottom = 8.dp)) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .scale(scale),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1)),
+                            border = BorderStroke(1.dp, Color(0xFFFFC107)),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text("⚡ CIRCLE DEAL", color = Color(0xFFFF9800), fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                                    Text("Ends in", color = Color.Gray, fontSize = 12.sp)
+                                }
+                                
+                                val timerBg = Color(0xFFFF9800)
+                                val timerText = Color.White
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Box(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(timerBg).padding(horizontal = 8.dp, vertical = 4.dp)) {
+                                        Text("02", color = timerText, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+                                    }
+                                    Text(":", color = timerBg, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                    Box(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(timerBg).padding(horizontal = 8.dp, vertical = 4.dp)) {
+                                        Text("45", color = timerText, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+                                    }
+                                    Text(":", color = timerBg, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                    Box(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(timerBg).padding(horizontal = 8.dp, vertical = 4.dp)) {
+                                        Text("12", color = timerText, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White)
+                        .padding(16.dp)
+                ) {
+                    if (product.isCircleDeal) {
+                        CircleDealsBadge()
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+                    Text(
+                        text = product.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text("৳ ${product.price.toInt()}", style = MaterialTheme.typography.headlineMedium, color = Color(0xFF00643C), fontWeight = FontWeight.Bold)
+                        if (product.oldPrice != null) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("৳ ${product.oldPrice.toInt()}", style = MaterialTheme.typography.bodyMedium, color = Color.Gray, textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough)
+                        }
+                        if (product.discount != null) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("-${product.discount}%", style = MaterialTheme.typography.labelMedium, color = Color.Red, modifier = Modifier.background(Color(0xFFFFEBEE), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp, vertical = 2.dp))
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Star, contentDescription = "Rating", tint = Color(0xFFFFC107), modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("${product.rating}", style = MaterialTheme.typography.bodyMedium)
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text("${product.soldCount} Sold", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Description placeholder
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White)
+                        .padding(16.dp)
+                ) {
+                    Text("Product Description", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "This is a premium product available on Circle Bazar. It features top-notch quality and durability. Get it now while stocks last! Especially during Circle Deals, you can enjoy massive discounts.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.DarkGray,
+                        lineHeight = 20.sp
+                    )
+                }
+            }
+        }
+    }
 }

@@ -1,0 +1,69 @@
+Starting a Gradle Daemon, 1 busy Daemon could not be reused, use --status for details
+Reusing configuration cache.
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:processDebugGoogleServices UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+
+> Task :app:compileDebugKotlin
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1256:106 Syntax error: Expecting '"'.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1258:1 Unresolved reference 'https'.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1258:6 Syntax error: Expecting an element.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1258:7 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1359:133 Unresolved reference 'togetherWith'.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1410:133 Unresolved reference 'togetherWith'.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1466:3 Syntax error: Expecting a top level declaration.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1468:3 Syntax error: Expecting a top level declaration.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1468:11 Syntax error: Expecting a top level declaration.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1469:7 Syntax error: Expecting a top level declaration.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1469:14 Syntax error: Expecting a top level declaration.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1469:16 Syntax error: Expecting a top level declaration.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1469:16 Functions which invoke @Composable functions must be marked with the @Composable annotation
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1469:16 Function declaration must have a name.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1470:11 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1470:11 This material API is experimental and is likely to change or to be removed in the future.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1473:40 Unresolved reference 'onBack'.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1479:74 Unresolved reference 'shareIntent'.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1480:23 Function invocation 'context(...)' expected.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1480:31 Unresolved reference 'startActivity'.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1485:24 This material API is experimental and is likely to change or to be removed in the future.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1485:42 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1485:42 This material API is experimental and is likely to change or to be removed in the future.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1493:3 Syntax error: Expecting a top level declaration.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1493:5 Syntax error: Expecting a top level declaration.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1493:5 Functions which invoke @Composable functions must be marked with the @Composable annotation
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1493:5 Function declaration must have a name.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1493:7 Unresolved reference 'paddingValues'.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1493:21 Syntax error: Unexpected tokens (use ';' to separate expressions on the same line).
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1494:7 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1495:48 Unresolved reference 'paddingValues'.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1496:70 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1498:33 Unresolved reference 'circleDealsList'.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1507:38 Argument type mismatch: actual type is 'Char', but 'Product' was expected.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1509:35 Function invocation 'size(...)' expected.
+e: file:///app/applet/app/src/main/java/com/example/MainActivity.kt:1516:1 Syntax error: Expecting a top level declaration.
+
+> Task :app:compileDebugKotlin FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 24s
+9 actionable tasks: 1 executed, 8 up-to-date
+Configuration cache entry reused.
