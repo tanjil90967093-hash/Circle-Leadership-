@@ -111,40 +111,51 @@ fun MainScreen() {
   Scaffold(
     modifier = Modifier.nestedScroll(nestedScrollConnection),
     bottomBar = {
-      NavigationBar(
-        modifier = Modifier.offset { androidx.compose.ui.unit.IntOffset(x = 0, y = bottomBarOffsetHeightPx.floatValue.toInt()) },
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 8.dp
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .offset { androidx.compose.ui.unit.IntOffset(x = 0, y = bottomBarOffsetHeightPx.floatValue.toInt()) }
+          .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
       ) {
-        val navBackStackEntry by navController.currentBackStackEntryAsState()
-        val currentDestination = navBackStackEntry?.destination
-        items.forEach { screen ->
-          NavigationBarItem(
-            icon = {
-              Icon(
-                imageVector = if (currentDestination?.hierarchy?.any { it.route == screen.route } == true) screen.selectedIcon else screen.icon,
-                contentDescription = screen.title
-              )
-            },
-            label = { Text(screen.title, fontSize = 10.sp) },
-            selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-            onClick = {
-              navController.navigate(screen.route) {
-                popUpTo(navController.graph.findStartDestination().id) {
-                  saveState = true
+        NavigationBar(
+          modifier = Modifier
+            .fillMaxWidth()
+            .shadow(16.dp, RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(24.dp)),
+          containerColor = Color.White,
+          tonalElevation = 0.dp,
+          windowInsets = WindowInsets(0, 0, 0, 0)
+        ) {
+          val navBackStackEntry by navController.currentBackStackEntryAsState()
+          val currentDestination = navBackStackEntry?.destination
+          items.forEach { screen ->
+            NavigationBarItem(
+              icon = {
+                Icon(
+                  imageVector = if (currentDestination?.hierarchy?.any { it.route == screen.route } == true) screen.selectedIcon else screen.icon,
+                  contentDescription = screen.title
+                )
+              },
+              label = { Text(screen.title, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+              selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+              onClick = {
+                navController.navigate(screen.route) {
+                  popUpTo(navController.graph.findStartDestination().id) {
+                    saveState = true
+                  }
+                  launchSingleTop = true
+                  restoreState = true
                 }
-                launchSingleTop = true
-                restoreState = true
-              }
-            },
-            colors = NavigationBarItemDefaults.colors(
-              selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-              selectedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
-              indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
-              unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-              unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+              },
+              colors = NavigationBarItemDefaults.colors(
+                selectedIconColor = Color(0xFF00643C),
+                selectedTextColor = Color(0xFF00643C),
+                indicatorColor = Color(0xFFE8F5E9),
+                unselectedIconColor = Color.Gray,
+                unselectedTextColor = Color.Gray
+              )
             )
-          )
+          }
         }
       }
     }
@@ -300,13 +311,20 @@ fun HomeScreen(onSearchClick: () -> Unit = {}, onCameraClick: () -> Unit = {}, o
                       .padding(horizontal = 16.dp),
                   verticalAlignment = Alignment.CenterVertically
               ) {
-                  Icon(Icons.Outlined.Search, contentDescription = "Search", tint = Color.Gray)
+                  Icon(Icons.Outlined.Search, contentDescription = "Search", tint = Color.Gray, modifier = Modifier.size(20.dp))
                   Spacer(Modifier.width(8.dp))
-                  Text("Search products, brands and stores", color = Color.Gray, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                  Text(
+                      "Search products, brands and stores", 
+                      color = Color.Gray, 
+                      fontSize = 13.sp, 
+                      maxLines = 1,
+                      overflow = TextOverflow.Ellipsis,
+                      modifier = Modifier.weight(1f)
+                  )
                   Icon(
                       Icons.Outlined.CameraAlt, 
                       contentDescription = "Image Search", 
-                      tint = MaterialTheme.colorScheme.primary, 
+                      tint = Color(0xFF00643C), 
                       modifier = Modifier.padding(horizontal = 8.dp).size(20.dp).clickable(
                          interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                          indication = null
@@ -317,7 +335,7 @@ fun HomeScreen(onSearchClick: () -> Unit = {}, onCameraClick: () -> Unit = {}, o
                   Icon(
                       Icons.Outlined.Mic, 
                       contentDescription = "Voice Search", 
-                      tint = MaterialTheme.colorScheme.primary, 
+                      tint = Color(0xFF00643C), 
                       modifier = Modifier.padding(start = 8.dp).size(20.dp).clickable(
                          interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                          indication = null
@@ -354,7 +372,7 @@ fun HomeScreen(onSearchClick: () -> Unit = {}, onCameraClick: () -> Unit = {}, o
            horizontalArrangement = Arrangement.SpaceBetween,
            verticalAlignment = Alignment.CenterVertically
         ) {
-           Row(verticalAlignment = Alignment.CenterVertically) {
+           Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
              val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "shimmer")
              val translateAnim = infiniteTransition.animateFloat(
                 initialValue = 0f,
@@ -380,7 +398,10 @@ fun HomeScreen(onSearchClick: () -> Unit = {}, onCameraClick: () -> Unit = {}, o
                         offset = androidx.compose.ui.geometry.Offset(0f, 4f), 
                         blurRadius = 8f
                     )
-                )
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
              )
              Spacer(modifier = Modifier.width(12.dp))
              val timerBg = Color(0xFFFFB300)
@@ -479,40 +500,82 @@ fun HomeScreen(onSearchClick: () -> Unit = {}, onCameraClick: () -> Unit = {}, o
                modifier = Modifier
                    .fillMaxWidth()
                    .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars)
-                   .padding(horizontal = 16.dp, vertical = 6.dp),
+                   .padding(horizontal = 16.dp, vertical = 12.dp),
                horizontalArrangement = Arrangement.SpaceBetween,
                verticalAlignment = Alignment.CenterVertically
            ) {
                // Logo and Title (Left aligned)
                Row(
-                   verticalAlignment = Alignment.CenterVertically
+                   verticalAlignment = Alignment.CenterVertically,
+                   modifier = Modifier.weight(1f)
                ) {
                    Image(
                        painter = androidx.compose.ui.res.painterResource(id = R.drawable.circle_bazar_icon_1784463007760),
                        contentDescription = "Logo",
-                       modifier = Modifier.size(28.dp).clip(CircleShape),
+                       modifier = Modifier.size(32.dp).clip(CircleShape),
                        contentScale = ContentScale.Crop
                    )
-                   Spacer(modifier = Modifier.width(10.dp))
+                   Spacer(modifier = Modifier.width(12.dp))
                    Text(
                        "Circle Bazar", 
                        style = MaterialTheme.typography.titleLarge.copy(
                            fontWeight = FontWeight.ExtraBold,
-                           fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                           fontFamily = FontFamily.SansSerif,
-                           fontSize = 18.sp,
+                           fontFamily = FontFamily.Serif,
+                           letterSpacing = 0.5.sp,
+                           fontSize = 20.sp,
                            color = Color(0xFF00643C)
-                       )
+                       ),
+                       maxLines = 1,
+                       overflow = TextOverflow.Ellipsis
                    )
                }
                
-               // Icons (Right aligned, better styling)
+               Spacer(modifier = Modifier.width(8.dp))
+               
+               // Icons (Right aligned, premium styling)
                Row(
-                   horizontalArrangement = Arrangement.spacedBy(16.dp),
+                   horizontalArrangement = Arrangement.spacedBy(12.dp),
                    verticalAlignment = Alignment.CenterVertically
                ) {
-                   Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_custom_search), contentDescription = "Search", tint = Color(0xFF333333), modifier = Modifier.size(20.dp).clickable { onSearchClick() })
-                   Icon(painter = androidx.compose.ui.res.painterResource(R.drawable.ic_custom_notification), contentDescription = "Notifications", tint = Color(0xFF333333), modifier = Modifier.size(20.dp).clickable { })
+                   Box(
+                       modifier = Modifier
+                           .size(36.dp)
+                           .clip(CircleShape)
+                           .background(Color(0xFFF0F5F2))
+                           .clickable { onSearchClick() },
+                       contentAlignment = Alignment.Center
+                   ) {
+                       Icon(
+                           Icons.Outlined.Search,
+                           contentDescription = "Search",
+                           tint = Color(0xFF00643C),
+                           modifier = Modifier.size(18.dp)
+                       )
+                   }
+                   Box(
+                       modifier = Modifier
+                           .size(36.dp)
+                           .clip(CircleShape)
+                           .background(Color(0xFFF0F5F2))
+                           .clickable { },
+                       contentAlignment = Alignment.Center
+                   ) {
+                       Icon(
+                           Icons.Outlined.Notifications,
+                           contentDescription = "Notifications",
+                           tint = Color(0xFF00643C),
+                           modifier = Modifier.size(18.dp)
+                       )
+                       // Notification Badge
+                       Box(
+                           modifier = Modifier
+                               .align(Alignment.TopEnd)
+                               .padding(top = 8.dp, end = 8.dp)
+                               .size(6.dp)
+                               .clip(CircleShape)
+                               .background(Color.Red)
+                       )
+                   }
                }
            }
        }
@@ -529,9 +592,23 @@ fun SectionTitle(title: String, action: String) {
     horizontalArrangement = Arrangement.SpaceBetween,
     verticalAlignment = Alignment.CenterVertically
   ) {
-    Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    Text(
+      title, 
+      style = MaterialTheme.typography.titleMedium, 
+      fontWeight = FontWeight.Bold,
+      modifier = Modifier.weight(1f),
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis
+    )
     if (action.isNotEmpty()) {
-      Text(action, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
+      Spacer(modifier = Modifier.width(16.dp))
+      Text(
+        action, 
+        color = MaterialTheme.colorScheme.primary, 
+        style = MaterialTheme.typography.bodyMedium,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+      )
     }
   }
 }
@@ -1055,7 +1132,13 @@ fun SearchScreen(onBack: () -> Unit) {
             decorationBox = { innerTextField ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (query.isEmpty()) {
-                        Text("Search products, brands...", color = Color.Gray, fontSize = 14.sp)
+                        Text(
+                            "Search products, brands...", 
+                            color = Color.Gray, 
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                     innerTextField()
                 }
@@ -1066,8 +1149,8 @@ fun SearchScreen(onBack: () -> Unit) {
         Icon(
             Icons.Outlined.CameraAlt, 
             contentDescription = "Image Search", 
-            tint = Color.Black, 
-            modifier = Modifier.padding(8.dp).size(24.dp).clickable(
+            tint = Color(0xFF00643C), 
+            modifier = Modifier.padding(8.dp).size(20.dp).clickable(
                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                 indication = null
             ) { try { context.startActivity(chooserIntent) } catch(e: Exception) {} }
@@ -1075,8 +1158,8 @@ fun SearchScreen(onBack: () -> Unit) {
         Icon(
             Icons.Outlined.Mic, 
             contentDescription = "Voice Search", 
-            tint = Color.Black, 
-            modifier = Modifier.padding(8.dp).size(24.dp).clickable(
+            tint = Color(0xFF00643C), 
+            modifier = Modifier.padding(8.dp).size(20.dp).clickable(
                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                 indication = null
             ) { try { context.startActivity(voiceIntent) } catch(e: Exception) {} }
