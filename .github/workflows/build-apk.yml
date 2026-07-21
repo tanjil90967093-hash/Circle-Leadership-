@@ -19,8 +19,9 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Restore/Download Valid Gradle Wrapper
+    - name: Ensure Directory and Download Gradle Wrapper Jar
       run: |
+        mkdir -p gradle/wrapper
         curl -L -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar
 
     - name: Make gradlew Executable
